@@ -356,8 +356,30 @@ class NCDomainTransfer(NCAPI):
         pass
 
 class NCSSL(NCAPI):
-    def create(self, years, quantity, ssl_type, coupon=None):
-        pass
+    def create(self, years, ssl_type, coupon=None):
+        args = {'Years': years, 'Type': ssl_type}
+        doc = self._call('namecheap.ssl.create', args)
+
+        result = doc['CommandResponse'] \
+            .findall(self.client._name('SSLCreateResult'))[0]
+        create_result = result.getchildren()[0]
+
+        assert result.attrib['DomainName'] == domain, \
+               'Got an unexpected domain name.'
+
+        ret = {
+            'ChargedAmount': Decimal(result.attrib['ChargedAmount']),
+            'IsSuccess': self._bool(result.attrib['IsSuccess']),
+            'OrderId': int(result.attrib['OrderId']),
+            'TransactionId': int(result.attrib['TransactionId']),
+            'CertificateID': int(create_result.attrib['CertificateID']),
+            'Created': create_result.attrib['Created'],
+            'SSLType': create_result.attrib['SSLType'],
+            'Status': create_result.attrib['Status'],
+            'Years': int(create_result.attrib['Years'])
+        }
+
+        return ret
 
     def activate(self, certificate_id, approver_email, csr, web_server_type,
                  contact_data):
