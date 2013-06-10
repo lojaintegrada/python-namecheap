@@ -357,15 +357,26 @@ class NCDomainTransfer(NCAPI):
 
 class NCSSL(NCAPI):
     def create(self, years, ssl_type, coupon=None):
+        """Creates a new SSL certificate.
+
+        Online docs:
+        http://www.namecheap.com/support/api/ssl/namecheap.ssl.create.aspx
+
+        """
         args = {'Years': years, 'Type': ssl_type}
-        doc = self._call('namecheap.ssl.create', args)
+        if coupon:
+            args['coupon'] = coupon
+
+        doc = self._call('ssl.create', args)
 
         result = doc['CommandResponse'] \
             .findall(self.client._name('SSLCreateResult'))[0]
         create_result = result.getchildren()[0]
 
-        assert result.attrib['DomainName'] == domain, \
-               'Got an unexpected domain name.'
+        assert create_result.attrib['SSLType'] == ssl_type, \
+               'Got an unexpected SSL type.'
+        assert int(create_result.attrib['Years']) == years, \
+               'Got an unexpected amount of years.'
 
         ret = {
             'ChargedAmount': Decimal(result.attrib['ChargedAmount']),
@@ -378,12 +389,57 @@ class NCSSL(NCAPI):
             'Status': create_result.attrib['Status'],
             'Years': int(create_result.attrib['Years'])
         }
-
         return ret
 
     def activate(self, certificate_id, approver_email, csr, web_server_type,
                  contact_data):
-        pass
+        """Activates a newly purchased SSL certificate.
+
+        Required contact_data items for the Domain validated certificate::
+
+            AdminOrganizationName
+            AdminJobTitle
+            AdminFirstName
+            AdminLastName
+            AdminAddress1
+            AdminAddress2
+            AdminCity
+            AdminStateProvince
+            AdminPostalCode
+            AdminCountry
+            AdminPhone
+            AdminPhoneExt
+            AdminFax
+            AdminEmailAddress
+
+        Online docs:
+        http://www.namecheap.com/support/api/ssl/namecheap.ssl.activate.aspx
+
+        """
+        args = {
+            'CertificateID': certificate_id,
+            'ApproverEmail': approver_email,
+            'csr': csr,
+            'WebServerType': web_server_type
+        }
+        if isinstance(contact_data, dict):
+            args.update(contact_data)
+
+        assert approver_email.split('@')[0] in (
+                'admin', 'administrator', 'hostmaster',
+                'webmaster', 'postmaster'
+            ), 'The approver email is not correct.'
+
+        doc = self._call('ssl.activate', args)
+
+        result = doc['CommandResponse'] \
+            .findall(self.client._name('SSLActivateResult'))[0]
+
+        ret = {
+            'ID': int(result.attrib['ID']),
+            'IsSuccess': self._bool(result.attrib['IsSuccess'])
+        }
+        return ret
 
     def get_info(self, certificate_id):
         pass
