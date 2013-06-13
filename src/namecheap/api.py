@@ -484,7 +484,7 @@ class NCSSL(NCAPI):
                  page=None, page_size=None):
         pass
 
-    def resend_approver_email(self, cretificate_id):
+    def resend_approver_email(self, certificate_id):
         """Resends the approver email.
 
         Online docs:
