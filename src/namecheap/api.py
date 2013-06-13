@@ -442,7 +442,38 @@ class NCSSL(NCAPI):
         return ret
 
     def get_info(self, certificate_id):
-        pass
+        """Retrieves information about the requested SSL certificate
+
+        Online docs:
+        http://www.namecheap.com/support/api/ssl/namecheap.ssl.getInfo.aspx
+
+        """
+        args = {'CertificateID': certificate_id}
+
+        doc = self._call('ssl.getInfo', args)
+
+        result = doc['CommandResponse'] \
+            .findall(self.client._name('SSLGetInfoResult'))[0]
+
+        dates_keys = ['IssuedOn', 'Expires', 'ActivationExpireDate']
+        for k in dates_keys:
+            if result.attrib.get(k):
+                try:
+                    result.attrib[k] = datetime.datetime.strptime(
+                        result.attrib[k], '%m/%d/%Y').date()
+                except ValueError:
+                    pass
+
+        ret = {
+            'Status': result.attrib['Status'],
+            'StatusDescription': result.attrib['StatusDescription'],
+            'Type': result.attrib['Type'],
+            'IssuedOn': result.attrib['IssuedOn'],
+            'Expires': result.attrib['Expires'],
+            'ActivationExpireDate': result.attrib['ActivationExpireDate'],
+            'OrderId': int(result.attrib['OrderId'])
+        }
+        return ret
 
     def parse_csr(self, csr, certificate_type=None):
         pass
@@ -454,7 +485,24 @@ class NCSSL(NCAPI):
         pass
 
     def resend_approver_email(self, cretificate_id):
-        pass
+        """Resends the approver email.
+
+        Online docs:
+        http://www.namecheap.com/support/api/ssl/namecheap.ssl.resendApproverEmail.aspx
+
+        """
+        args = {'CertificateID': certificate_id}
+
+        doc = self._call('ssl.resendApproverEmail', args)
+
+        result = doc['CommandResponse'] \
+            .findall(self.client._name('SSLResendApproverEmailResult'))[0]
+
+        ret = {
+            'ID': int(result.attrib['ID']),
+            'IsSuccess': self._bool(result.attrib['IsSuccess'])
+        }
+        return ret
 
     def resend_fullfillment_email(self, certificate_id):
         pass
