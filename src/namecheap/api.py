@@ -104,6 +104,7 @@ NC_FIND_DOMAINNAME = 'DOMAINNAME'
 NC_FIND_EMAILADDRESS = 'EMAILADDRESS'
 NC_FIND_USERNAME = 'USERNAME'
 
+
 class NCAPI(object):
     def __init__(self, client):
         self.client = client
@@ -136,6 +137,13 @@ class NCAPI(object):
 
         return doc
 
+    def build_xml_path(self, path):
+        parts = path.split("/")
+        for index, part in enumerate(parts):
+            parts[index] = self.client.get_xml_name(part)
+        return "/".join(parts)
+
+
 class NCDomain(NCAPI):
     def create(self, contact_data, nameservers=None, add_free_whoisguard=None,
                enable_whoisguard=None, extended_attributes=None):
@@ -159,7 +167,7 @@ class NCDomain(NCAPI):
         doc = self._call('domains.renew', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('DomainRenewResult'))[0]
+            .findall(self.client.get_xml_name('DomainRenewResult'))[0]
 
         assert result.attrib['DomainName'] == domain, \
                'Got an unexpected domain name.'
@@ -185,7 +193,7 @@ class NCDomain(NCAPI):
         doc = self._call('domains.setRegistrarLock', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('DomainSetRegistrarLockResult'))[0]
+            .findall(self.client.get_xml_name('DomainSetRegistrarLockResult'))[0]
 
         assert result.attrib['Domain'] == domain, \
                'Got an unexpected domain name.'
@@ -197,7 +205,7 @@ class NCDomain(NCAPI):
         doc = self._call('domains.getRegistrarLock', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('DomainGetRegistrarLockResult'))[0]
+            .findall(self.client.get_xml_name('DomainGetRegistrarLockResult'))[0]
 
         assert result.attrib['Domain'] == domain, \
                'Got an unexpected domain name.'
@@ -222,8 +230,8 @@ class NCDomain(NCAPI):
 
         ret = dict()
         domains = doc['CommandResponse'] \
-            .findall(self.client._name('DomainGetListResult'))[0] \
-            .findall(self.client._name('Domain'))
+            .findall(self.client.get_xml_name('DomainGetListResult'))[0] \
+            .findall(self.client.get_xml_name('Domain'))
 
         ret['Domains'] = []
         for domain in domains:
@@ -246,14 +254,14 @@ class NCDomain(NCAPI):
             })
 
         paging = doc['CommandResponse'] \
-            .findall(self.client._name('Paging'))[0]
+            .findall(self.client.get_xml_name('Paging'))[0]
         ret['Paging'] = {
             'TotalItems': int(paging.findall \
-                          (self.client._name('TotalItems'))[0].text),
+                          (self.client.get_xml_name('TotalItems'))[0].text),
             'CurrentPage': int(paging.findall \
-                           (self.client._name('CurrentPage'))[0].text),
+                           (self.client.get_xml_name('CurrentPage'))[0].text),
             'PageSize': int(paging.findall \
-                        (self.client._name('PageSize'))[0].text),
+                        (self.client.get_xml_name('PageSize'))[0].text),
         }
 
         return ret
@@ -262,8 +270,8 @@ class NCDomain(NCAPI):
         doc = self._call('domains.getTldList')
 
         results = doc['CommandResponse'] \
-            .findall(self.client._name('Tlds'))[0] \
-            .findall(self.client._name('Tld'))
+            .findall(self.client.get_xml_name('Tlds'))[0] \
+            .findall(self.client.get_xml_name('Tld'))
 
 
         ret = dict()
@@ -297,7 +305,7 @@ class NCDomain(NCAPI):
         doc = self._call('domains.check', args)
 
         results = doc['CommandResponse'] \
-            .findall(self.client._name('DomainCheckResult'))
+            .findall(self.client.get_xml_name('DomainCheckResult'))
 
         ret = dict()
         for domain in results:
@@ -305,6 +313,7 @@ class NCDomain(NCAPI):
             ret[domain.attrib['Domain']] = avail
 
         return ret
+
 
 class NCDomainDNS(NCAPI):
     def set_default(self, sld, tld):
@@ -329,6 +338,7 @@ class NCDomainDNS(NCAPI):
     def set_email_forwarding(self, domain, mailboxes, forwardto):
         pass
 
+
 class NCDomainNS(NCAPI):
     def create(self, sld, tld, nameserver, ip):
         pass
@@ -342,6 +352,7 @@ class NCDomainNS(NCAPI):
     def update(self, sld, tld, nameserver, oldip, ip):
         pass
 
+
 class NCDomainTransfer(NCAPI):
     def create(self, domain, years, eppcode=None, coupon=None):
         pass
@@ -354,6 +365,7 @@ class NCDomainTransfer(NCAPI):
     def get_list(self, list_type=None, search_term=None, page=None,
                  page_size=None, sort_by=None):
         pass
+
 
 class NCSSL(NCAPI):
     def create(self, years, ssl_type, coupon=None):
@@ -370,7 +382,7 @@ class NCSSL(NCAPI):
         doc = self._call('ssl.create', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('SSLCreateResult'))[0]
+            .findall(self.client.get_xml_name('SSLCreateResult'))[0]
         create_result = result.getchildren()[0]
 
         assert create_result.attrib['SSLType'] == ssl_type, \
@@ -433,7 +445,7 @@ class NCSSL(NCAPI):
         doc = self._call('ssl.activate', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('SSLActivateResult'))[0]
+            .findall(self.client.get_xml_name('SSLActivateResult'))[0]
 
         ret = {
             'ID': int(result.attrib['ID']),
@@ -441,19 +453,19 @@ class NCSSL(NCAPI):
         }
         return ret
 
-    def get_info(self, certificate_id):
+    def get_info(self, certificate_id, return_certificate=False, return_type="individual"):
         """Retrieves information about the requested SSL certificate
 
         Online docs:
         http://www.namecheap.com/support/api/ssl/namecheap.ssl.getInfo.aspx
 
         """
-        args = {'CertificateID': certificate_id}
+        args = {'CertificateID': certificate_id, "returncertificate": return_certificate}
+        if return_certificate:
+            args["returntype"] = return_type
 
         doc = self._call('ssl.getInfo', args)
-
-        result = doc['CommandResponse'] \
-            .findall(self.client._name('SSLGetInfoResult'))[0]
+        result = doc['CommandResponse'].findall(self.build_xml_path('SSLGetInfoResult'))[0]
 
         dates_keys = ['IssuedOn', 'Expires', 'ActivationExpireDate']
         for k in dates_keys:
@@ -473,6 +485,22 @@ class NCSSL(NCAPI):
             'ActivationExpireDate': result.attrib['ActivationExpireDate'],
             'OrderId': int(result.attrib['OrderId'])
         }
+        if return_certificate:
+            certificates_element = result.findall(self.build_xml_path('CertificateDetails/Certificates'))
+            if not certificates_element:
+                raise NCCertificatesNotFoundError("Returned result dont have a certificate list.")
+            crt = certificates_element[0].findall(self.build_xml_path("Certificate"))
+            if not crt:
+                raise NCCRTNotFoundError("Certificate list dont have a crt session.")
+            certificates = {
+                "crt": crt[0].text
+            }
+            if return_type == 'individual':
+                ca_certificates = certificates_element[0].findall(self.build_xml_path("CaCertificates/Certificate"))
+                for certificate in ca_certificates:
+                    if certificate.attrib['Type'] == "INTERMEDIATE":
+                        certificates["ca"] = certificate.find(self.build_xml_path("Certificate")).text
+            ret['Certificates'] = certificates
         return ret
 
     def parse_csr(self, csr, certificate_type=None):
@@ -480,6 +508,7 @@ class NCSSL(NCAPI):
 
     def get_approver_email_list(self, domain, certificate_type):
         pass
+
     def get_list(self, list_type=None, search_term=None, sort_by=None,
                  page=None, page_size=None):
         pass
@@ -496,7 +525,7 @@ class NCSSL(NCAPI):
         doc = self._call('ssl.resendApproverEmail', args)
 
         result = doc['CommandResponse'] \
-            .findall(self.client._name('SSLResendApproverEmailResult'))[0]
+            .findall(self.client.get_xml_name('SSLResendApproverEmailResult'))[0]
 
         ret = {
             'ID': int(result.attrib['ID']),
@@ -506,6 +535,7 @@ class NCSSL(NCAPI):
 
     def resend_fullfillment_email(self, certificate_id):
         pass
+
 
 class NCUser(NCAPI):
     def create(self, username, password, email, acept_terms, accept_news,
@@ -536,6 +566,7 @@ class NCUser(NCAPI):
     def reset_password(self, find_by, find_by_value, email_from_name=None,
                        email_from_address=None, url_pattern=None):
         pass
+
 
 class NCUserAddress(NCAPI):
     def create(self, address_name, contact_data, default=None):
