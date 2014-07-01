@@ -485,7 +485,7 @@ class NCSSL(NCAPI):
             'ActivationExpireDate': result.attrib['ActivationExpireDate'],
             'OrderId': int(result.attrib['OrderId'])
         }
-        if return_certificate and not ret['Status'].lower() == 'cancelled':
+        if return_certificate and ret['Status'].lower() == 'active':
             certificates_element = result.findall(self.build_xml_path('CertificateDetails/Certificates'))
             if not certificates_element:
                 raise NCCertificatesNotFoundError("Returned result dont have a certificate list for CertificateID={}.".format(certificate_id))
