@@ -477,7 +477,7 @@ class NCSSL(NCAPI):
                     pass
 
         ret = {
-            'Status': result.attrib['Status'],
+            'Status': result.attrib['Status'] or '',
             'StatusDescription': result.attrib['StatusDescription'],
             'Type': result.attrib['Type'],
             'IssuedOn': result.attrib['IssuedOn'],
@@ -485,7 +485,7 @@ class NCSSL(NCAPI):
             'ActivationExpireDate': result.attrib['ActivationExpireDate'],
             'OrderId': int(result.attrib['OrderId'])
         }
-        if return_certificate:
+        if return_certificate and not ret['Status'].lower() == 'cancelled':
             certificates_element = result.findall(self.build_xml_path('CertificateDetails/Certificates'))
             if not certificates_element:
                 raise NCCertificatesNotFoundError("Returned result dont have a certificate list for CertificateID={}.".format(certificate_id))
