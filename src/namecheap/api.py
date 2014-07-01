@@ -488,7 +488,7 @@ class NCSSL(NCAPI):
         if return_certificate:
             certificates_element = result.findall(self.build_xml_path('CertificateDetails/Certificates'))
             if not certificates_element:
-                raise NCCertificatesNotFoundError("Returned result dont have a certificate list.")
+                raise NCCertificatesNotFoundError("Returned result dont have a certificate list for CertificateID={}.".format(certificate_id))
             crt = certificates_element[0].findall(self.build_xml_path("Certificate"))
             if not crt:
                 raise NCCRTNotFoundError("Certificate list dont have a crt session.")
