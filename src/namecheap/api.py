@@ -501,7 +501,19 @@ class NCSSL(NCAPI):
                     if certificate.attrib['Type'] == "INTERMEDIATE":
                         certificates["ca"] = certificate.find(self.build_xml_path("Certificate")).text
             ret['Certificates'] = certificates
+            ret['ApproverEmail'] = self._extract_value_from_details(result, 'ApproverEmail')
+            ret['CommonName'] = self._extract_value_from_details(result, 'CommonName')
+            ret['AdministratorName'] = self._extract_value_from_details(result, 'AdministratorName')
+            ret['AdministratorEmail'] = self._extract_value_from_details(result, 'AdministratorEmail')
+
         return ret
+
+    def _extract_value_from_details(self, result, key):
+        value = result.findall(self.build_xml_path('CertificateDetails/{}'.format(key)))[:1]
+        if value:
+            return value[0].text
+        return ""
+
 
     def parse_csr(self, csr, certificate_type=None):
         pass
