@@ -521,9 +521,68 @@ class NCSSL(NCAPI):
     def get_approver_email_list(self, domain, certificate_type):
         pass
 
-    def get_list(self, list_type=None, search_term=None, sort_by=None,
-                 page=None, page_size=None):
-        pass
+    def get_list(self, list_type=None, search_term=None, page=None,
+                 page_size=None, sort_by=None):
+        args = dict()
+        if list_type:
+            args['ListType'] = list_type
+        if search_term:
+            args['SearchTerm'] = search_term
+        if page:
+            args['Page'] = page
+        if page_size:
+            args['PageSize'] = page_size
+        if sort_by:
+            args['SortBy'] = sort_by
+
+        doc = self._call('ssl.getList', args)
+
+        ret = dict()
+
+        ssls = doc['CommandResponse'] \
+            .findall(self.client.get_xml_name('SSLListResult'))[0] \
+            .findall(self.client.get_xml_name('SSL'))
+
+        ret['SSLs'] = []
+        for ssl in ssls:
+            certificateid = ssl.attrib['CertificateID']
+            hostname = ssl.attrib['HostName']
+            ssltype = ssl.attrib['SSLType']
+            purchasedate = ssl.attrib['PurchaseDate'].split('/')
+            expiredate = ssl.attrib['ExpireDate']
+            activationexpiredate = ssl.attrib['ActivationExpireDate']
+            isexpiredyn = ssl.attrib['IsExpiredYN']
+            status = ssl.attrib['Status']
+            years = ssl.attrib['Years']
+
+            purchasedate = datetime.date(int(purchasedate[2]), int(purchasedate[0]),
+                                    int(purchasedate[1]))
+
+            ret['SSLs'].append({
+                'ID': int(certificateid),
+                'HostName': hostname,
+                'SSLType': ssltype,
+                'PurchaseDate': purchasedate,
+                'ExpireDate': expiredate,
+                'ActivationExpireDate': activationexpiredate,
+                'IsExpiredYN': isexpiredyn,
+                'Status': status,
+                'Years': int(years)
+            })
+
+        paging = doc['CommandResponse'] \
+            .findall(self.client.get_xml_name('Paging'))[0]
+        ret['Paging'] = {
+            'TotalItems': int(paging.findall \
+                          (self.client.get_xml_name('TotalItems'))[0].text),
+            'CurrentPage': int(paging.findall \
+                           (self.client.get_xml_name('CurrentPage'))[0].text),
+            'PageSize': int(paging.findall \
+                        (self.client.get_xml_name('PageSize'))[0].text),
+        }
+
+        return ret
+
 
     def resend_approver_email(self, certificate_id):
         """Resends the approver email.
