@@ -33,6 +33,7 @@ NC_SANDBOX = "https://api.sandbox.namecheap.com/xml.response"
 NC_PRODUCTION = "https://api.namecheap.com/xml.response"
 NC_NAMESPACE = "http://api.namecheap.com/xml.response"
 
+
 class NCClient(object):
     def __init__(
             self, apikey, apiuser, username,
@@ -70,8 +71,12 @@ class NCClient(object):
 
         return url
 
-    def _name(self, tag):
-        return '{' + NC_NAMESPACE + '}' + tag
+    def get_xml_name(self, tag):
+        return "{{{}}}{}".format(self.xml_namespace, tag)
+
+    @property
+    def xml_namespace(self):
+        return NC_NAMESPACE
 
     def _process_response(self, response):
         doc = {
@@ -89,37 +94,37 @@ class NCClient(object):
 
         doc['Status'] = root.attrib['Status']
 
-        errors = root.findall(self._name('Errors'))
+        errors = root.findall(self.get_xml_name('Errors'))
         if len(errors) > 0 and len(errors[0]) > 0:
             doc['Errors'] = {
                 'Number': errors[0][0].attrib['Number'],
                 'Text': errors[0][0].text
             }
 
-        warnings = root.findall(self._name('Warnings'))
+        warnings = root.findall(self.get_xml_name('Warnings'))
         if len(warnings) > 0 and len(warnings[0]) > 0:
             doc['Warnings'] = {
-                'Number': warning[0][0].attrib['Number'],
-                'Text': warning[0][0].text
+                'Number': warnings[0][0].attrib['Number'],
+                'Text': warnings[0][0].text
             }
 
-        command = root.findall(self._name('RequestedCommand'))
+        command = root.findall(self.get_xml_name('RequestedCommand'))
         if len(command) > 0:
             doc['RequestedCommand'] = command[0].text
 
-        cmdres = root.findall(self._name('CommandResponse'))
+        cmdres = root.findall(self.get_xml_name('CommandResponse'))
         if len(cmdres) > 0:
             doc['CommandResponse'] = cmdres[0]
 
-        server = root.findall(self._name('Server'))
+        server = root.findall(self.get_xml_name('Server'))
         if len(server) > 0:
             doc['Server'] = server[0].text
 
-        gmttime = root.findall(self._name('GMTTimeDifference'))
+        gmttime = root.findall(self.get_xml_name('GMTTimeDifference'))
         if len(gmttime) > 0:
             doc['GMTTimeDifference'] = gmttime[0].text
 
-        exectime = root.findall(self._name('ExecutionTime'))
+        exectime = root.findall(self.get_xml_name('ExecutionTime'))
         if len(exectime) > 0:
             doc['ExecutionTime'] = Decimal(exectime[0].text)
 
